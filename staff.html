@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>staff Dashboard</title>
+    
+    </head>
+<body>
+    <h1> staff Dashboard</h1>
+    <ul id ="alerts"></ul>
+    <script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket =io();
+
+    socket.on("receiveAlert", (data) => {
+        const li =
+        document.createElement("li");
+        li.innerText =`Alert! Location: ${data.lat},${data.lng}`;
+        document.getElementById("alerts").appendChild(li);
+    });
+</script>
+</body>
+    </html>
