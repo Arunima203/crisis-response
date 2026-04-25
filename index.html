@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rapid Crisis Response</title>
+    <link rel="stylesheet"
+    href="style.css">
+</head>
+<body>
+    <button onclick="openPopup()">open Crisis Info</button>
+    <div id="popup" class="popup">
+        <div class="popup-content">
+            <span class="close"
+       onclick="closePopup()"></span>
+       <h2> Rapid Crisis Response</h2>
+       <h3>Accelerated Emergency Response and Crisis Coordination in Hospitality</h3>
+       
+       <p>
+           Hospitality venus face unpredictable,high-stakes emergencies
+           that demand
+                   instantinious,coordinated reactions to protect lives and property.
+                   During a crisis ,critical information is often siloed,fracturing communication
+                   between distressed guests,on site staff and first responders.
+       </p>
+         <button onclick="sendAlert()">SOS Alert</button>
+         <p id="status"></p>
+        </div>
+    </div>
+
+   <script src="/socket.io/socket.io.js"></script>
+   <script src="script.js"></script>
+   
+   </body>
+   </html>
