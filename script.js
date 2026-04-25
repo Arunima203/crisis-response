@@ -8,11 +8,11 @@ function closePopup()  {
 }
  
 function sendAlert() {
-    navigator.geolocation.getCurrentPosition((position => {
+    navigator.geolocation.getCurrentPosition((position) => {
         const data = {
             lat: position.coords.latitude,
             lng:
-  position.coords.longitude,          
+  position.coords.longitude         
         };
     socket.emit("sendAlert",data);
     document.getElementById("status").innerText ="Alert Sent!";
