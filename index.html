@@ -26,7 +26,29 @@
         </div>
     </div>
 
-   <script src="https://crisis-response.onrender.com"></script>
+   <script>
+    function sendAlert() {
+        fetch('https://crisis-response.onrender.com/send-alert', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: "Emergency Alert",
+                lat: 22.57,
+                lng: 88.36 // Example longitude
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('status').innerText = 'Alert sent successfully!';
+        })
+        .catch(error => {
+            console.error('Error sending alert:', error);
+            document.getElementById('status').innerText = 'Failed to send alert.';
+        });
+    }
+   </script>
    <script src="script.js"></script>
    
    </body>
