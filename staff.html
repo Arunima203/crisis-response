@@ -73,6 +73,15 @@
 
         const socket = io();
 
+        // Debug: Check connection
+        socket.on('connect', () => {
+            console.log('✅ Connected to server, ID:', socket.id);
+        });
+
+        socket.on('connect_error', (err) => {
+            console.error('❌ Connection error:', err.message);
+        });
+
         // Play alert sound
         function playAlertSound() {
             const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU' + 'A'.repeat(100));

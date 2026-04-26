@@ -2,11 +2,12 @@ const express=require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
+const path = require("path");
 
-const app =express();
+const app=express();
 
 app.use(cors());
-app.use(express.static("public"));
+app.use(express.static(__dirname));
 
 const server= http.createServer(app);
 const io =socketIo(server);
@@ -14,16 +15,17 @@ const io =socketIo(server);
 
 
 io.on("connection",(socket) => {
-    console.log("user connected");
+    console.log("✅ User connected:", socket.id);
 
 socket.on("sendAlert",(data)=> {
-    console.log("Alert:",data);
+    console.log("📥 Alert received:", data);
     io.emit("receiveAlert",data);
+    console.log("📤 Alert broadcast to all clients");
 });
 
 
 socket.on("disconnect",()=> {
-   console.log("user disconnected");
+   console.log("❌ User disconnected:", socket.id);
     });
 
    
