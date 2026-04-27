@@ -1,221 +1,251 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Staff Dashboard - Crisis Response</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <title>Staff Dashboard</title>
+
+  <!-- Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <div class="staff-container">
-        <header>
-            <h1>🚨 Staff Dashboard</h1>
-            <div class="staff-info">
-                <span id="currentTime"></span>
-                <span class="status online">● Live</span>
-            </div>
-        </header>
 
-        <div class="dashboard-grid">
-            <!-- Alert List Section -->
-            <div class="alert-section">
-                <h2>Incoming Alerts</h2>
-                <div class="alert-stats">
-                    <div class="stat-box critical">
-                        <span id="criticalCount">0</span>
-                        <label>Critical</label>
-                    </div>
-                    <div class="stat-box pending">
-                        <span id="pendingCount">0</span>
-                        <label>Pending</label>
-                    </div>
-                    <div class="stat-box resolved">
-                        <span id="resolvedCount">0</span>
-                        <label>Resolved</label>
-                    </div>
-                </div>
-                <ul id="alertsList"></ul>
-            </div>
+<h2>🚨 Staff Dashboard</h2>
 
-            <!-- Map Section -->
-            <div class="map-section">
-                <h2>Live Location Map</h2>
-                <div id="map"></div>
-            </div>
+<!-- Stats Boxes -->
+<div class="stats-container">
+  <div class="stat-box critical">
+    <span id="criticalCount">0</span>
+    <label>🔴 Critical</label>
+  </div>
+  <div class="stat-box pending">
+    <span id="pendingCount">0</span>
+    <label>🟡 Pending</label>
+  </div>
+  <div class="stat-box resolved">
+    <span id="resolvedCount">0</span>
+    <label>🟢 Resolved</label>
+  </div>
+</div>
+
+<!-- Alert Lists by Status -->
+<div class="alerts-container">
+  <div class="alert-column">
+    <h3>🔴 Critical Alerts</h3>
+    <ul id="criticalList" class="alert-list"></ul>
+  </div>
+  <div class="alert-column">
+    <h3>🟡 Pending Alerts</h3>
+    <ul id="pendingList" class="alert-list"></ul>
+  </div>
+  <div class="alert-column">
+    <h3>🟢 Resolved Alerts</h3>
+    <ul id="resolvedList" class="alert-list"></ul>
+  </div>
+</div>
+
+<!-- Time-wise Alert History -->
+<div class="history-section">
+  <h3>📜 Alert History (Time-wise)</h3>
+  <ul id="historyList" class="history-list"></ul>
+</div>
+
+<!-- Map -->
+<div id="map" style="height:400px;"></div>
+
+<script>
+let map = L.map('map').setView([22.57, 88.36], 13);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: 'Map'
+}).addTo(map);
+
+let markers = [];
+let alerts = [];
+
+// Fetch alerts
+setInterval(() => {
+  fetch("/alerts")
+    .then(res => res.json())
+    .then(data => {
+      alerts = data;
+      updateDashboard();
+    });
+}, 3000);
+
+function updateDashboard() {
+  // Filter alerts by status
+  const critical = alerts.filter(a => a.status === 'critical');
+  const pending = alerts.filter(a => a.status === 'pending' || !a.status);
+  const resolved = alerts.filter(a => a.status === 'resolved');
+
+  // Update counts
+  document.getElementById("criticalCount").innerText = critical.length;
+  document.getElementById("pendingCount").innerText = pending.length;
+  document.getElementById("resolvedCount").innerText = resolved.length;
+
+  // Update status lists
+  updateList("criticalList", critical, "critical");
+  updateList("pendingList", pending, "pending");
+  updateList("resolvedList", resolved, "resolved");
+
+  // Update time-wise history (newest first)
+  const sortedAlerts = [...alerts].sort((a, b) => new Date(b.time) - new Date(a.time));
+  updateHistoryList(sortedAlerts);
+
+  // Update map markers
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+
+  alerts.forEach(alert => {
+    const color = alert.status === 'resolved' ? 'green' : (alert.status === 'pending' ? 'orange' : 'red');
+    const marker = L.marker([alert.lat, alert.lng])
+      .addTo(map)
+      .bindPopup(`<b>${alert.message}</b><br>Status: ${alert.status || 'pending'}<br>Time: ${new Date(alert.time).toLocaleString()}`);
+    markers.push(marker);
+  });
+}
+
+function updateList(elementId, alertArray, status) {
+  const list = document.getElementById(elementId);
+  if (alertArray.length === 0) {
+    list.innerHTML = '<li class="empty">No alerts</li>';
+    return;
+  }
+
+  list.innerHTML = alertArray.map((alert) => `
+    <li class="alert-item ${status}">
+      <div class="alert-info">
+        <strong>${alert.message}</strong>
+        <span>⏰ ${new Date(alert.time).toLocaleString()}</span>
+        <span>📍 ${alert.lat.toFixed(4)}, ${alert.lng.toFixed(4)}</span>
+      </div>
+      <div class="alert-actions">
+        ${status === 'critical' ? `<button onclick="updateStatus('${alert.time}', 'pending')">🟡</button>` : ''}
+        ${status !== 'resolved' ? `<button onclick="updateStatus('${alert.time}', 'resolved')">✅</button>` : ''}
+      </div>
+    </li>
+  `).join('');
+}
+
+function updateHistoryList(alertArray) {
+  const list = document.getElementById("historyList");
+  if (alertArray.length === 0) {
+    list.innerHTML = '<li class="empty">No alert history</li>';
+    return;
+  }
+
+  list.innerHTML = alertArray.map((alert) => {
+    const statusIcon = alert.status === 'resolved' ? '🟢' : (alert.status === 'pending' ? '🟡' : '🔴');
+    return `
+      <li class="history-item">
+        <span class="status-icon">${statusIcon}</span>
+        <div class="history-info">
+          <strong>${alert.message}</strong>
+          <span class="time">⏰ ${new Date(alert.time).toLocaleString()}</span>
+          <span class="location">📍 ${alert.lat.toFixed(5)}, ${alert.lng.toFixed(5)}</span>
         </div>
-
-        <!-- Alert Details Modal -->
-        <div id="alertModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal()">&times;</span>
-                <h2>Alert Details</h2>
-                <div id="alertDetails"></div>
-                <div class="action-buttons">
-                    <button class="btn-acknowledge" onclick="acknowledgeAlert()">✓ Acknowledge</button>
-                    <button class="btn-resolve" onclick="resolveAlert()">✓ Resolve</button>
-                    <button class="btn-dispatch" onclick="dispatchHelp()">🚑 Dispatch Help</button>
-                </div>
-            </div>
+        <div class="history-actions">
+          ${alert.status !== 'resolved' ? `<button onclick="updateStatus('${alert.time}', 'resolved')">✅</button>` : ''}
         </div>
-    </div>
+      </li>
+    `;
+  }).join('');
+}
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/socket.io/cdn.socket.io.js/4.7.5/socket.io.min.js"></script>
-    <script>
-        // Initialize map
-        const map = L.map('map').setView([0, 0], 10);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+function updateStatus(alertTime, newStatus) {
+  const alert = alerts.find(a => a.time === alertTime);
+  if (alert) {
+    alert.status = newStatus;
+    updateDashboard();
+  }
+}
+</script>
 
-        const markers = {};
-        let selectedAlertId = null;
-        let alerts = [];
+</body>
+</html>
 
-        const socket = io('https://crisis-response.onrender.com');
+<script>
+let map = L.map('map').setView([22.57, 88.36], 13);
 
-        // Debug: Check connection
-        socket.on('connect', () => {
-            console.log('✅ Connected to server, ID:', socket.id);
-        });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: 'Map'
+}).addTo(map);
 
-        socket.on('connect_error', (err) => {
-            console.error('❌ Connection error:', err.message);
-        });
+let markers = [];
+let alerts = [];
 
-        // Play alert sound
-        function playAlertSound() {
-            const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU' + 'A'.repeat(100));
-            audio.volume = 0.5;
-            audio.play().catch(() => {});
-        }
+// Fetch alerts
+setInterval(() => {
+  fetch("/alerts")
+    .then(res => res.json())
+    .then(data => {
+      alerts = data;
+      updateDashboard();
+    });
+}, 3000);
 
-        // Update current time
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('currentTime').innerText = 
-                now.toLocaleString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric',
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-        }
-        setInterval(updateTime, 1000);
-        updateTime();
+function updateDashboard() {
+  // Filter alerts by status
+  const critical = alerts.filter(a => a.status === 'critical');
+  const pending = alerts.filter(a => a.status === 'pending' || !a.status);
+  const resolved = alerts.filter(a => a.status === 'resolved');
 
-        // Receive alerts
-        socket.on("newAlert", (data) => {
-            const alert = {
-                id: Date.now(),
-                lat: data.lat,
-                lng: data.lng,
-                timestamp: new Date(),
-                status: 'new',
-                acknowledged: false,
-                resolved: false
-            };
-            alerts.unshift(alert);
-            playAlertSound();
-            updateAlertList();
-            updateStats();
-            addMarker(alert);
-        });
+  // Update counts
+  document.getElementById("criticalCount").innerText = critical.length;
+  document.getElementById("pendingCount").innerText = pending.length;
+  document.getElementById("resolvedCount").innerText = resolved.length;
 
-        // Add marker to map
-        function addMarker(alert) {
-            const marker = L.marker([alert.lat, alert.lng])
-                .addTo(map)
-                .bindPopup(`<b>Emergency!</b><br>Time: ${alert.timestamp.toLocaleTimeString()}`);
-            markers[alert.id] = marker;
-            map.setView([alert.lat, alert.lng], 15);
-        }
+  // Update lists
+  updateList("criticalList", critical, "critical");
+  updateList("pendingList", pending, "pending");
+  updateList("resolvedList", resolved, "resolved");
 
-        // Update alert list
-        function updateAlertList() {
-            const list = document.getElementById('alertsList');
-            list.innerHTML = alerts.map(alert => `
-                <li class="alert-item ${alert.status}" onclick="selectAlert(${alert.id})">
-                    <div class="alert-icon">🚨</div>
-                    <div class="alert-info">
-                        <strong>Emergency Alert</strong>
-                        <span>${alert.timestamp.toLocaleTimeString()}</span>
-                    </div>
-                    <div class="alert-status status-${alert.status}">${alert.status}</div>
-                </li>
-            `).join('');
-        }
+  // Update map markers
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
 
-        // Update statistics
-        function updateStats() {
-            document.getElementById('criticalCount').innerText = 
-                alerts.filter(a => a.status === 'new').length;
-            document.getElementById('pendingCount').innerText = 
-                alerts.filter(a => a.status === 'acknowledged').length;
-            document.getElementById('resolvedCount').innerText = 
-                alerts.filter(a => a.status === 'resolved').length;
-        }
+  alerts.forEach(alert => {
+    const color = alert.status === 'resolved' ? 'green' : (alert.status === 'pending' ? 'orange' : 'red');
+    const marker = L.marker([alert.lat, alert.lng])
+      .addTo(map)
+      .bindPopup(`<b>${alert.message}</b><br>Status: ${alert.status || 'pending'}<br>Time: ${new Date(alert.time).toLocaleTimeString()}`);
+    markers.push(marker);
+  });
+}
 
-        // Select alert
-        function selectAlert(id) {
-            selectedAlertId = id;
-            const alert = alerts.find(a => a.id === id);
-            if (alert) {
-                document.getElementById('alertDetails').innerHTML = `
-                    <p><strong>Location:</strong> ${alert.lat}, ${alert.lng}</p>
-                    <p><strong>Time Received:</strong> ${alert.timestamp.toLocaleString()}</p>
-                    <p><strong>Status:</strong> ${alert.status.toUpperCase()}</p>
-                `;
-                document.getElementById('alertModal').style.display = 'block';
-                map.setView([alert.lat, alert.lng], 16);
-            }
-        }
+function updateList(elementId, alertArray, status) {
+  const list = document.getElementById(elementId);
+  if (alertArray.length === 0) {
+    list.innerHTML = '<li class="empty">No alerts</li>';
+    return;
+  }
 
-        // Close modal
-        function closeModal() {
-            document.getElementById('alertModal').style.display = 'none';
-        }
+  list.innerHTML = alertArray.map((alert, index) => `
+    <li class="alert-item ${status}">
+      <div class="alert-info">
+        <strong>${alert.message}</strong>
+        <span>${new Date(alert.time).toLocaleTimeString()}</span>
+        <span>📍 ${alert.lat.toFixed(4)}, ${alert.lng.toFixed(4)}</span>
+      </div>
+      <div class="alert-actions">
+        ${status === 'critical' ? `<button onclick="updateStatus('${alert.time}', 'pending')">🟡</button>` : ''}
+        ${status !== 'resolved' ? `<button onclick="updateStatus('${alert.time}', 'resolved')">✅</button>` : ''}
+      </div>
+    </li>
+  `).join('');
+}
 
-        // Action functions
-        function acknowledgeAlert() {
-            if (selectedAlertId) {
-                const alert = alerts.find(a => a.id === selectedAlertId);
-                if (alert) {
-                    alert.status = 'acknowledged';
-                    alert.acknowledged = true;
-                    updateAlertList();
-                    updateStats();
-                    closeModal();
-                }
-            }
-        }
+function updateStatus(alertTime, newStatus) {
+  const alert = alerts.find(a => a.time === alertTime);
+  if (alert) {
+    alert.status = newStatus;
+    updateDashboard();
+  }
+}
+</script>
 
-        function resolveAlert() {
-            if (selectedAlertId) {
-                const alert = alerts.find(a => a.id === selectedAlertId);
-                if (alert) {
-                    alert.status = 'resolved';
-                    alert.resolved = true;
-                    updateAlertList();
-                    updateStats();
-                    closeModal();
-                }
-            }
-        }
-
-        function dispatchHelp() {
-            alert('Help dispatched to alert location!');
-            acknowledgeAlert();
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('alertModal');
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
-    </script>
 </body>
 </html>

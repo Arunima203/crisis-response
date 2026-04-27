@@ -1,44 +1,97 @@
-const socket=io();
+// Crisis Response System - Guest Script
+console.log("✅ Script loaded successfully!");
 
-// Debug: Check connection
-socket.on('connect', () => {
-    console.log('✅ Guest connected to server, ID:', socket.id);
-});
-
-socket.on('connect_error', (err) => {
-    console.error('❌ Connection error:', err.message);
-});
-
-function openPopup()   {
-    document.getElementById("popup").style.display ="block";
+function goToStaff() {
+  window.location.href = "staff.html";
 }
 
-function closePopup()  {
-    document.getElementById("popup").style.display ="none";
+function openPopup() {
+  document.getElementById("popup").style.display = "block";
 }
- 
+
+function closePopup() {
+  document.getElementById("popup").style.display = "none";
+}
+
 function sendAlert() {
-    navigator.geolocation.getCurrentPosition((position) => {
-        const data = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude         
-        };
-        console.log('📤 Sending alert:', data);
-        socket.emit("sendAlert",data);
-        document.getElementById("status").innerText ="Alert Sent!";
+  console.log("🔴 sendAlert() called");
+  
+  if (!navigator.geolocation) {
+    alert("Geolocation not supported by your browser!");
+    return;
+  }
 
-    }, (err) => {
-        console.error('❌ Geolocation error:', err.message);
-        document.getElementById("status").innerText = "Error: " + err.message;
-    });
+  // Show loading message
+  const btn = event.target;
+  const originalText = btn.innerText;
+  btn.innerText = "Sending...";
+  btn.disabled = true;
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      console.log("📍 Location obtained:", position.coords);
+      
+      const alertData = {
+        message: "Emergency SOS!",
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy
+      };
+
+      console.log("📤 Sending alert:", alertData);
+
+      // Use relative URL
+    fetch("http://localhost:3000/alert", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(alertData)
+      })
+      .then(res => {
+        console.log("📬 Response status:", res.status);
+        if (!res.ok) {
+          throw new Error("Network response was not ok: " + res.statusText);
+        }
+        return res.json();
+      })
+      .then(data => {
+        console.log("📋 Response data:", data);
+        alert("🚨 SOS Alert Sent!\n\nLocation: " + alertData.lat.toFixed(5) + ", " + alertData.lng.toFixed(5) + "\nAccuracy: " + Math.round(alertData.accuracy) + "m");
+        btn.innerText = originalText;
+        btn.disabled = false;
+      })
+      .catch(err => {
+        console.error("❌ Fetch error:", err);
+        alert("Error sending alert! Check console for details.");
+        btn.innerText = originalText;
+        btn.disabled = false;
+      });
+    },
+    (error) => {
+      console.error("❌ Location error:", error);
+      let errorMsg = "Could not get location: ";
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          errorMsg += "Location permission denied. Please allow location access.";
+          break;
+        case error.POSITION_UNAVAILABLE:
+          errorMsg += "Location information unavailable.";
+          break;
+        case error.TIMEOUT:
+          errorMsg += "Location request timed out.";
+          break;
+        default:
+          errorMsg += error.message;
+      }
+      alert(errorMsg);
+      btn.innerText = originalText;
+      btn.disabled = false;
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
 }
-
-// Inside staff.html script
-socket.on('new-alert', (data) => {
-    console.log("Alert received on Dashboard:", data);
-    // Logic to increment your 'Incoming Alerts' counter goes here
-    let countElement = document.getElementById('pending-count'); 
-    countElement.innerText = parseInt(countElement.innerText) + 1;
-});
-
-
