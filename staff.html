@@ -59,7 +59,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/socket.io/cdn.socket.io.js/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         // Initialize map
         const map = L.map('map').setView([0, 0], 10);
@@ -71,7 +71,7 @@
         let selectedAlertId = null;
         let alerts = [];
 
-        const socket = io('https://crisis-response.onrender.com');
+        const socket = io();
 
         // Debug: Check connection
         socket.on('connect', () => {
@@ -105,22 +105,49 @@
         setInterval(updateTime, 1000);
         updateTime();
 
-        // Receive alerts
-        socket.on("newAlert", (data) => {
-            const alert = {
-                id: Date.now(),
+        function normalizeAlert(data) {
+            return {
+                id: data.id,
                 lat: data.lat,
                 lng: data.lng,
-                timestamp: new Date(),
-                status: 'new',
-                acknowledged: false,
-                resolved: false
+                timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+                status: data.status || 'new',
+                acknowledged: data.status === 'acknowledged',
+                resolved: data.status === 'resolved'
             };
+        }
+
+        // Receive existing alerts when dashboard connects/reloads
+        socket.on("existingAlerts", (existingAlerts) => {
+            alerts = existingAlerts
+                .map(normalizeAlert)
+                .sort((a, b) => b.timestamp - a.timestamp);
+            Object.values(markers).forEach((marker) => map.removeLayer(marker));
+            Object.keys(markers).forEach((key) => delete markers[key]);
+            alerts.forEach((alert) => addMarker(alert));
+            updateAlertList();
+            updateStats();
+        });
+
+        // Receive new alert broadcasts
+        socket.on("newAlert", (data) => {
+            const alert = normalizeAlert(data);
             alerts.unshift(alert);
             playAlertSound();
             updateAlertList();
             updateStats();
             addMarker(alert);
+        });
+
+        // Receive alert status updates from other staff actions
+        socket.on("alertUpdated", (updatedAlert) => {
+            const idx = alerts.findIndex((a) => a.id === updatedAlert.id);
+            if (idx === -1) {
+                return;
+            }
+            alerts[idx] = normalizeAlert(updatedAlert);
+            updateAlertList();
+            updateStats();
         });
 
         // Add marker to map
@@ -182,6 +209,7 @@
             if (selectedAlertId) {
                 const alert = alerts.find(a => a.id === selectedAlertId);
                 if (alert) {
+                    socket.emit("acknowledgeAlert", { id: selectedAlertId });
                     alert.status = 'acknowledged';
                     alert.acknowledged = true;
                     updateAlertList();
@@ -195,6 +223,7 @@
             if (selectedAlertId) {
                 const alert = alerts.find(a => a.id === selectedAlertId);
                 if (alert) {
+                    socket.emit("resolveAlert", { id: selectedAlertId });
                     alert.status = 'resolved';
                     alert.resolved = true;
                     updateAlertList();
