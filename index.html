@@ -2,54 +2,28 @@
 <html>
 <head>
     <title>Rapid Crisis Response</title>
-    <link rel="stylesheet"
-    href="style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <button onclick="openPopup()">open Crisis Info</button>
     <div id="popup" class="popup">
         <div class="popup-content">
-            <span class="close"
-       onclick="closePopup()"></span>
-       <h2> Rapid Crisis Response</h2>
-       <h3>Accelerated Emergency Response and Crisis Coordination in Hospitality</h3>
-       
-       <p>
-           Hospitality venus face unpredictable,high-stakes emergencies
-           that demand
-                   instantinious,coordinated reactions to protect lives and property.
-                   During a crisis ,critical information is often siloed,fracturing communication
-                   between distressed guests,on site staff and first responders.
-       </p>
-         <button onclick="sendAlert()">SOS Alert</button>
-         <p id="status"></p>
+            <span class="close" onclick="closePopup()"></span>
+            <h2>Rapid Crisis Response</h2>
+            <h3>Accelerated Emergency Response and Crisis Coordination in Hospitality</h3>
+            
+            <p>
+                Hospitality venues face unpredictable, high-stakes emergencies
+                that demand instantaneous, coordinated reactions to protect lives and property.
+                During a crisis, critical information is often siloed, fracturing communication
+                between distressed guests, on site staff and first responders.
+            </p>
+            <button onclick="sendAlert()">SOS Alert</button>
+            <p id="status"></p>
         </div>
     </div>
 
-   <script>
-    function sendAlert() {
-        fetch('https://crisis-response.onrender.com/send-alert', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message: "Emergency Alert",
-                lat: 22.57,
-                lng: 88.36 // Example longitude
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('status').innerText = 'Alert sent successfully!';
-        })
-        .catch(error => {
-            console.error('Error sending alert:', error);
-            document.getElementById('status').innerText = 'Failed to send alert.';
-        });
-    }
-   </script>
-   <script src="script.js"></script>
-   
-   </body>
-   </html>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
