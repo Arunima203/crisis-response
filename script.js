@@ -33,8 +33,12 @@ function sendAlert() {
     });
 }
 
-socket.on("receiveAlert",(data) => {
-    console.log('📥 Received alert:', data);
-    alert("Emergency Alert!\nLocation: " + data.lat +" , " + data.lng);
+// Inside staff.html script
+socket.on('new-alert', (data) => {
+    console.log("Alert received on Dashboard:", data);
+    // Logic to increment your 'Incoming Alerts' counter goes here
+    let countElement = document.getElementById('pending-count'); 
+    countElement.innerText = parseInt(countElement.innerText) + 1;
 });
+
 
