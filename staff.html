@@ -59,7 +59,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="/socket.io/socket.io.js/4.7.5/socket.io.min.js"></script>
     <script>
         // Initialize map
         const map = L.map('map').setView([0, 0], 10);
@@ -71,7 +71,7 @@
         let selectedAlertId = null;
         let alerts = [];
 
-        const socket = io();
+        const socket = io('https://crisis-response.onrender.com');
 
         // Debug: Check connection
         socket.on('connect', () => {
@@ -106,7 +106,7 @@
         updateTime();
 
         // Receive alerts
-        socket.on("receiveAlert", (data) => {
+        socket.on("newAlert", (data) => {
             const alert = {
                 id: Date.now(),
                 lat: data.lat,
