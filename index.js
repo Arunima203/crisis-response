@@ -11,6 +11,7 @@ app.use(express.static(__dirname));
 
 const server= http.createServer(app);
 const io =socketIo(server);
+
 const alerts = [];
 
 
@@ -22,8 +23,6 @@ io.on("connection",(socket) => {
     }
 
 socket.on("sendAlert",(data)=> {
-    console.log("📥 Alert received:", data);
-    io.emit("receiveAlert",data);
     const alert = {
         id: Date.now(),
         lat: data.lat,
@@ -62,7 +61,7 @@ socket.on("disconnect",()=> {
    console.log("❌ User disconnected:", socket.id);
     });
 
-
+   
 });
 
 
@@ -70,3 +69,4 @@ socket.on("disconnect",()=> {
     server.listen(PORT, () => {
         console.log(`Server running on PORT${PORT}`);
     });
+

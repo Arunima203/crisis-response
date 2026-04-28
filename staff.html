@@ -155,6 +155,7 @@ function updateHistoryList(alertArray) {
   }).join('');
 }
 
+<<<<<<< HEAD
 function updateStatus(alertTime, newStatus) {
   const alert = alerts.find(a => a.time === alertTime);
   if (alert) {
@@ -163,12 +164,26 @@ function updateStatus(alertTime, newStatus) {
   }
 }
 </script>
+=======
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([0, 0], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+>>>>>>> 4c4541e47e6e3f8e4414a22be4ab0c5b545bd4cb
 
 </body>
 </html>
 
+<<<<<<< HEAD
 <script>
 let map = L.map('map').setView([22.57, 88.36], 13);
+=======
+        const socket = io();
+>>>>>>> 4c4541e47e6e3f8e4414a22be4ab0c5b545bd4cb
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'Map'
@@ -193,6 +208,7 @@ function updateDashboard() {
   const pending = alerts.filter(a => a.status === 'pending' || !a.status);
   const resolved = alerts.filter(a => a.status === 'resolved');
 
+<<<<<<< HEAD
   // Update counts
   document.getElementById("criticalCount").innerText = critical.length;
   document.getElementById("pendingCount").innerText = pending.length;
@@ -202,6 +218,61 @@ function updateDashboard() {
   updateList("criticalList", critical, "critical");
   updateList("pendingList", pending, "pending");
   updateList("resolvedList", resolved, "resolved");
+=======
+        function normalizeAlert(data) {
+            return {
+                id: data.id,
+                lat: data.lat,
+                lng: data.lng,
+                timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+                status: data.status || 'new',
+                acknowledged: data.status === 'acknowledged',
+                resolved: data.status === 'resolved'
+            };
+        }
+
+        // Receive existing alerts when dashboard connects/reloads
+        socket.on("existingAlerts", (existingAlerts) => {
+            alerts = existingAlerts
+                .map(normalizeAlert)
+                .sort((a, b) => b.timestamp - a.timestamp);
+            Object.values(markers).forEach((marker) => map.removeLayer(marker));
+            Object.keys(markers).forEach((key) => delete markers[key]);
+            alerts.forEach((alert) => addMarker(alert));
+            updateAlertList();
+            updateStats();
+        });
+
+        // Receive new alert broadcasts
+        socket.on("newAlert", (data) => {
+            const alert = normalizeAlert(data);
+            alerts.unshift(alert);
+            playAlertSound();
+            updateAlertList();
+            updateStats();
+            addMarker(alert);
+        });
+
+        // Receive alert status updates from other staff actions
+        socket.on("alertUpdated", (updatedAlert) => {
+            const idx = alerts.findIndex((a) => a.id === updatedAlert.id);
+            if (idx === -1) {
+                return;
+            }
+            alerts[idx] = normalizeAlert(updatedAlert);
+            updateAlertList();
+            updateStats();
+        });
+
+        // Add marker to map
+        function addMarker(alert) {
+            const marker = L.marker([alert.lat, alert.lng])
+                .addTo(map)
+                .bindPopup(`<b>Emergency!</b><br>Time: ${alert.timestamp.toLocaleTimeString()}`);
+            markers[alert.id] = marker;
+            map.setView([alert.lat, alert.lng], 15);
+        }
+>>>>>>> 4c4541e47e6e3f8e4414a22be4ab0c5b545bd4cb
 
   // Update map markers
   markers.forEach(m => map.removeLayer(m));
@@ -238,6 +309,7 @@ function updateList(elementId, alertArray, status) {
   `).join('');
 }
 
+<<<<<<< HEAD
 function updateStatus(alertTime, newStatus) {
   const alert = alerts.find(a => a.time === alertTime);
   if (alert) {
@@ -247,5 +319,49 @@ function updateStatus(alertTime, newStatus) {
 }
 </script>
 
+=======
+        // Action functions
+        function acknowledgeAlert() {
+            if (selectedAlertId) {
+                const alert = alerts.find(a => a.id === selectedAlertId);
+                if (alert) {
+                    socket.emit("acknowledgeAlert", { id: selectedAlertId });
+                    alert.status = 'acknowledged';
+                    alert.acknowledged = true;
+                    updateAlertList();
+                    updateStats();
+                    closeModal();
+                }
+            }
+        }
+
+        function resolveAlert() {
+            if (selectedAlertId) {
+                const alert = alerts.find(a => a.id === selectedAlertId);
+                if (alert) {
+                    socket.emit("resolveAlert", { id: selectedAlertId });
+                    alert.status = 'resolved';
+                    alert.resolved = true;
+                    updateAlertList();
+                    updateStats();
+                    closeModal();
+                }
+            }
+        }
+
+        function dispatchHelp() {
+            alert('Help dispatched to alert location!');
+            acknowledgeAlert();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('alertModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+>>>>>>> 4c4541e47e6e3f8e4414a22be4ab0c5b545bd4cb
 </body>
 </html>
